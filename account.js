@@ -187,4 +187,8 @@ function updateUI() {
 window.loginOrRegisterUser = loginOrRegisterUser;
 window.logoutUser = logoutUser;
 window.deleteAccount = deleteAccount;
-window.isLoggedIn = isLoggedIn;
+window.updateUI = updateUI;
+
+function isLoggedIn() {
+    return accountManager.isLoggedIn();
+}

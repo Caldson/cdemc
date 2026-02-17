@@ -86,7 +86,7 @@ class BlackMidiSystem {
         }
     }
 
-    async publishVideo(videoFile, midiFile, title) {
+    async publishVideo(videoFile, audioFile, midiFile, title) {
         if (!this.currentUser) {
             alert('请先登录！');
             return;
@@ -113,12 +113,47 @@ class BlackMidiSystem {
             return;
         }
 
+        if (videoFile) {
+            const videoFileName = videoFile.name.toLowerCase();
+            const allowedVideoExtensions = ['.mp4', '.mov', '.webm'];
+            const hasValidVideoExtension = allowedVideoExtensions.some(ext => videoFileName.endsWith(ext));
+
+            if (!hasValidVideoExtension) {
+                alert('视频格式不正确！只支持.mp4、.mov、.webm格式的文件。');
+                return;
+            }
+
+            const maxVideoSize = 150 * 1024 * 1024;
+            if (videoFile.size > maxVideoSize) {
+                alert('视频文件不能超过150MB！');
+                return;
+            }
+        }
+
+        if (audioFile) {
+            const audioFileName = audioFile.name.toLowerCase();
+            const allowedAudioExtensions = ['.mp3', '.wav', '.flac'];
+            const hasValidAudioExtension = allowedAudioExtensions.some(ext => audioFileName.endsWith(ext));
+
+            if (!hasValidAudioExtension) {
+                alert('音频格式不正确！只支持.mp3、.wav、.flac格式的文件。');
+                return;
+            }
+
+            const maxAudioSize = 50 * 1024 * 1024;
+            if (audioFile.size > maxAudioSize) {
+                alert('音频文件不能超过50MB！');
+                return;
+            }
+        }
+
         const videoId = Date.now().toString() + '_' + Math.random().toString(36).substr(2, 9);
         const videoData = {
             id: videoId,
             title: title,
             username: this.currentUser.username,
-            videoId: null,
+            videoId: videoFile ? videoId + '_video' : null,
+            audioId: audioFile ? videoId + '_audio' : null,
             midiId: videoId + '_midi',
             likes: [],
             createdAt: new Date().toISOString(),
@@ -126,11 +161,17 @@ class BlackMidiSystem {
         };
 
         try {
+            if (videoFile) {
+                await this.storage.storeFile(videoId + '_video', videoFile);
+            }
+            if (audioFile) {
+                await this.storage.storeFile(videoId + '_audio', audioFile);
+            }
             await this.storage.storeFile(videoId + '_midi', midiFile);
 
             this.videos.push(videoData);
             this.saveVideos();
-            this.addVideoToUI(videoData, null, midiFile);
+            this.addVideoToUI(videoData, videoFile, audioFile, midiFile);
             alert('发布成功！');
         } catch (error) {
             console.error('文件存储失败:', error);
@@ -161,9 +202,17 @@ class BlackMidiSystem {
             }
             
             const midiFile = await this.storage.getFile(video.midiId);
+            let videoFile = null;
+            let audioFile = null;
+            if (video.videoId) {
+                videoFile = await this.storage.getFile(video.videoId);
+            }
+            if (video.audioId) {
+                audioFile = await this.storage.getFile(video.audioId);
+            }
 
             if (midiFile) {
-                const videoElement = await this.createVideoElement(video, null, midiFile);
+                const videoElement = await this.createVideoElement(video, videoFile, audioFile, midiFile);
                 container.appendChild(videoElement);
             }
         }
@@ -187,6 +236,11 @@ class BlackMidiSystem {
                 publishForm.style.display = 'block';
                 const loginPrompt = publishForm.querySelector('.login-prompt');
                 if (!loginPrompt) {
+                    const promptElement = document.createElement('p');
+                    promptElement.className = 'login-prompt';
+                    promptElement.style.cssText = 'color: #f44336; font-weight: bold; margin-bottom: 10px;';
+                    promptElement.textContent = '你需要登录/注册账号才可以发布Midi。';
+                    publishForm.insertBefore(promptElement, publishForm.firstChild);
                 }
                 
                 const inputs = publishForm.querySelectorAll('input, button');
@@ -197,7 +251,7 @@ class BlackMidiSystem {
         }
     }
 
-    async addVideoToUI(video, videoFile, midiFile) {
+    async addVideoToUI(video, videoFile, audioFile, midiFile) {
         const container = document.getElementById('black_midi');
         if (!container) return;
 
@@ -206,7 +260,7 @@ class BlackMidiSystem {
             container.innerHTML = '';
         }
 
-        const videoElement = await this.createVideoElement(video, videoFile, midiFile);
+        const videoElement = await this.createVideoElement(video, videoFile, audioFile, midiFile);
         container.insertBefore(videoElement, container.firstChild);
     }
 
@@ -230,9 +284,25 @@ class BlackMidiSystem {
         return Array.from(videoMap.values());
     }
 
-    async createVideoElement(video, videoFile, midiFile) {
+    async createVideoElement(video, videoFile, audioFile, midiFile) {
         const container = document.createElement('div');
         container.style.cssText = 'flex: 0 0 auto; width: 350px; border: 1px solid #ccc; margin-right: 0; padding: 10px; position: relative; background-color: white; border-radius: 5px;';
+
+        if (videoFile) {
+            const videoElement = document.createElement('video');
+            videoElement.src = URL.createObjectURL(videoFile);
+            videoElement.style.cssText = 'width: 100%; height: 200px; object-fit: cover; margin-bottom: 10px;';
+            videoElement.controls = true;
+            container.appendChild(videoElement);
+        }
+
+        if (audioFile) {
+            const audioElement = document.createElement('audio');
+            audioElement.src = URL.createObjectURL(audioFile);
+            audioElement.style.cssText = 'width: 100%; margin-bottom: 10px;';
+            audioElement.controls = true;
+            container.appendChild(audioElement);
+        }
 
         const titleElement = document.createElement('h3');
         titleElement.textContent = video.title;
@@ -277,8 +347,8 @@ class BlackMidiSystem {
         idElement.appendChild(copyIdButton);
 
         const downloadButton = document.createElement('button');
-        downloadButton.textContent = '下载文件';
-        downloadButton.style.cssText = 'width: 100%; margin-top: 10px;';
+        downloadButton.textContent = '下载Midi';
+        downloadButton.style.cssText = 'margin-top: 10px;';
         downloadButton.onclick = () => {
             const link = document.createElement('a');
             link.href = URL.createObjectURL(midiFile);
@@ -294,6 +364,30 @@ class BlackMidiSystem {
             link.download = `${video.title}${extension}`;
             link.click();
         };
+
+        if (audioFile) {
+            const downloadAudioButton = document.createElement('button');
+            downloadAudioButton.textContent = '下载音频';
+            downloadAudioButton.style.cssText = 'margin-top: 10px;';
+            downloadAudioButton.onclick = () => {
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(audioFile);
+                
+                const audioFileName = video.title.toLowerCase();
+                let audioExtension = '.mp3';
+                if (audioFileName.endsWith('.wav')) {
+                    audioExtension = '.wav';
+                } else if (audioFileName.endsWith('.flac')) {
+                    audioExtension = '.flac';
+                }
+                
+                link.download = `${video.title}${audioExtension}`;
+                link.click();
+            };
+            container.appendChild(downloadAudioButton);
+        }
+
+        container.appendChild(downloadButton);
 
         const likeCountElement = document.createElement('span');
         likeCountElement.textContent = `❤️ ${video.likes.length}`;
@@ -338,6 +432,9 @@ class BlackMidiSystem {
             try {
                 if (video.videoId) {
                     await this.storage.deleteFile(video.videoId);
+                }
+                if (video.audioId) {
+                    await this.storage.deleteFile(video.audioId);
                 }
                 if (video.midiId) {
                     await this.storage.deleteFile(video.midiId);
@@ -432,9 +529,17 @@ class BlackMidiSystem {
 
         for (const video of sortedVideos) {
             const midiFile = await this.storage.getFile(video.midiId);
+            let videoFile = null;
+            let audioFile = null;
+            if (video.videoId) {
+                videoFile = await this.storage.getFile(video.videoId);
+            }
+            if (video.audioId) {
+                audioFile = await this.storage.getFile(video.audioId);
+            }
 
             if (midiFile) {
-                const videoElement = await this.createVideoElement(video, null, midiFile);
+                const videoElement = await this.createVideoElement(video, videoFile, audioFile, midiFile);
                 container.appendChild(videoElement);
             }
         }
@@ -451,20 +556,26 @@ class BlackMidiSystem {
 
         container.innerHTML = '';
 
-        const video = this.videos.find(v => v.id === videoId && v.status === 'approved');
+        const video = this.videos.find(v => v.id === videoId);
 
-        if (!video) {
-            container.innerHTML = '<p>未找到该ID的黑乐谱MIDI</p>';
+        if (!video || video.status !== 'approved') {
+            container.innerHTML = '<p>未找到该MIDI</p>';
             return;
         }
 
         const midiFile = await this.storage.getFile(video.midiId);
+        let videoFile = null;
+        let audioFile = null;
+        if (video.videoId) {
+            videoFile = await this.storage.getFile(video.videoId);
+        }
+        if (video.audioId) {
+            audioFile = await this.storage.getFile(video.audioId);
+        }
 
         if (midiFile) {
-            const videoElement = await this.createVideoElement(video, null, midiFile);
+            const videoElement = await this.createVideoElement(video, videoFile, audioFile, midiFile);
             container.appendChild(videoElement);
-        } else {
-            container.innerHTML = '<p>文件未找到</p>';
         }
     }
 
@@ -497,13 +608,22 @@ async function initBlackMidiSystem() {
 }
 
 function publishVideo() {
+    if (!blackMidiSystem) {
+        alert('系统正在初始化，请稍后再试！');
+        return;
+    }
+
     const midiFile = document.getElementById('midi_file').files[0];
     const title = document.getElementById('video_title').value;
+    const videoFile = document.getElementById('video_file').files[0];
+    const audioFile = document.getElementById('audio_file').files[0];
 
-    blackMidiSystem.publishVideo(null, midiFile, title);
+    blackMidiSystem.publishVideo(videoFile, audioFile, midiFile, title);
 
     document.getElementById('midi_file').value = '';
     document.getElementById('video_title').value = '';
+    document.getElementById('video_file').value = '';
+    document.getElementById('audio_file').value = '';
 }
 
 function showMessages() {
@@ -564,7 +684,19 @@ function viewVideosData() {
     alert('MIDI数据已输出到控制台，请按F12查看！');
 }
 
+function clearAllVideos() {
+    if (confirm('确定要清空所有MIDI吗？此操作不可撤销！')) {
+        localStorage.removeItem('cdbmc_videos');
+        if (blackMidiSystem) {
+            blackMidiSystem.videos = [];
+            blackMidiSystem.loadVideos();
+        }
+        alert('所有MIDI已清空！');
+    }
+}
+
 // 将所有函数暴露到全局作用域
+window.publishVideo = publishVideo;
 window.showMessages = showMessages;
 window.closeMessages = closeMessages;
 window.searchVideos = searchVideos;

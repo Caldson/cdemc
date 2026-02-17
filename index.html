@@ -41,6 +41,7 @@
             border-style: solid;
             height: 900px;
             width: 1570px;
+            overflow-y: auto;
         }
         #login_form {
             overflow: visible;
@@ -80,9 +81,9 @@
     <script src="account.js"></script>
     <script src="black_midi.js"></script>
     <script>
-        window.onload = function() {
+        window.onload = async function() {
             updateUI();
-            initBlackMidiSystem();
+            await initBlackMidiSystem();
             setTimeout(cleanDuplicateVideos, 500);
         }
     </script>
@@ -117,11 +118,20 @@
         <hr>
         <h2>发布MIDI</h2>
         <div id="publish_form">
+            <input type="text" id="video_title" placeholder="输入标题" style="width: 100%; margin-bottom: 10px;">
+            <br>
             <label>Midi文件</label>
             <input type="file" id="midi_file" accept=".mid,.zip,.rar" style="margin-bottom: 10px;">
             <small style="color: #666;">最大150MB，支持.mid、.zip、.rar格式</small>
             <br>
-            <input type="text" id="video_title" placeholder="输入标题" style="width: 100%; margin-bottom: 10px;">
+            <label>音频（选填）</label>
+            <input type="file" id="audio_file" accept=".mp3,.wav,.flac" style="margin-bottom: 10px;">
+            <small style="color: #666;">最大50MB，支持.mp3、.wav、.flac格式</small>
+            <br>
+            <label>视频（选填）</label>
+            <input type="file" id="video_file" accept=".mp4,.mov,.webm" style="margin-bottom: 10px;">
+            <small style="color: #666;">最大150MB，支持.mp4、.mov、.webm格式</small>
+            <br>
             <button onclick="publishVideo()" style="width: 100%;">发布</button>
         </div>
         <hr>
