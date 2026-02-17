@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CDEMC</title>
+    <link rel="stylesheet" href="button.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+        }
+        #topbar {
+            top: 10px;
+            left: 20px;
+            position: fixed;
+        }
+        #sidebar {
+            background-color: #9eff78;
+            padding: 20px;
+            border-radius: 10px;
+            border-color: #9eff78;
+            border-width: 5px;
+            border-style: solid;
+            position: fixed;
+            top: 100px;
+            left: 20px;
+            width: 300px;
+            height: 900px;
+            overflow-y: auto;
+        }
+        #content {
+            top: 100px;
+            left: 390px;
+            position: fixed;
+            padding: 20px;
+            background-color: #f5f5f5;
+            border-radius: 10px;
+            border-color: #9eff78;
+            border-width: 5px;
+            border-style: solid;
+            height: 900px;
+            width: 1570px;
+        }
+        #login_form {
+            overflow: visible;
+        }
+        #bottombar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: #008c31;
+            color: white;
+            text-align: center;
+            padding: 10px;
+            font-size: 15px;
+            border-radius: 10px;
+        }
+        #black_midi {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: nowrap;
+            gap: 20px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding: 10px;
+            min-height: 400px;
+            max-height: 600px;
+            width: 1000px;
+            border-radius: 10px;
+            border-color: #357425;
+            border-width: 5px;
+            border-style: solid;
+        }
+        #logout_form button {
+            width: 100%;
+        }
+    </style>
+    <script src="account.js"></script>
+    <script src="black_midi.js"></script>
+    <script>
+        window.onload = function() {
+            updateUI();
+            initBlackMidiSystem();
+            setTimeout(cleanDuplicateVideos, 500);
+        }
+    </script>
+</head>
+<body>
+    <div id="topbar">
+        <h1>Minecraft 乄 咖咯德苏林Midi社区(CDEMC)</h1>
+    </div>
+    <div id="sidebar">
+        <h2>用户信息</h2>
+        <label id="user_info">未登录</label>
+        <hr>
+        <div id="login_form">
+            <h3>登录/注册</h3>
+            <form onsubmit="event.preventDefault(); loginOrRegisterUser();">
+                <input type="text" id="username" name="username" placeholder="用户名" autocomplete="username" style="width: 100%; margin-bottom: 10px;">
+                <input type="password" id="password" name="password" placeholder="密码" autocomplete="current-password" style="width: 100%; margin-bottom: 10px;">
+                <button type="submit" style="width: 100%;">登录/注册</button>
+            </form>
+        </div>
+        <div id="logout_form" style="display: none;">
+            <button onclick="logoutUser()" style="margin-bottom: 10px;">登出</button>
+            <button onclick="deleteAccount()" style="background-color: #f44336; color: white;">注销账户</button>
+        </div>
+        <hr>
+        <button onclick="showMessages()" style="width: 100%; margin-bottom: 10px;">消息</button>    </div>
+    <div id="content">
+        <h1>欢迎来到CDEMC</h1>
+        <hr>
+        <h2>关于CDEMC</h2>
+        <label>CDEMC是一个Minecraft 乄 咖咯德苏林的Midi社区，在这里你可以分享、交流、学习Midi。</label>
+        <hr>
+        <h2>发布MIDI</h2>
+        <div id="publish_form">
+            <label>Midi文件</label>
+            <input type="file" id="midi_file" accept=".mid,.zip,.rar" style="margin-bottom: 10px;">
+            <small style="color: #666;">最大150MB，支持.mid、.zip、.rar格式</small>
+            <br>
+            <input type="text" id="video_title" placeholder="输入标题" style="width: 100%; margin-bottom: 10px;">
+            <button onclick="publishVideo()" style="width: 100%;">发布</button>
+        </div>
+        <hr>
+        <h2>MIDI</h2>
+        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+            <input type="text" id="search_input" placeholder="搜索标题..." style="flex: 1;" oninput="searchVideos()">
+            <button onclick="searchById()">搜索ID</button>
+        </div>
+        <div id="black_midi"></div>
+    </div>
+    <div id="bottombar">
+        <label>CDEMC 2026 © 版权所有 | 未经允许 · 禁止转载</label>
+    </div>
+</body>
+</html>
